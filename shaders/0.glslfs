@@ -1,0 +1,15 @@
+#version 330
+
+// ¬ход с вершинного шейдера
+in vs_output
+{
+   vec3 color;
+} f_in;
+
+// ќдин выходной аттрибут - цвет, который будет записан в буфер экрана
+out vec3 o_color;
+
+void main()
+{
+   o_color = f_in.color;
+}
