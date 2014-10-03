@@ -130,7 +130,6 @@ void sample_t::draw_frame( float time_from_start )
    GLuint const time_location = glGetUniformLocation(program_, "time");
    glUniform1f(time_location, time_from_start);
 
-   // установка vao (буфер с данными + формат)
    glBindBuffer(GL_ARRAY_BUFFER, vx_buf_);
 
    // запрашиваем индек аттрибута у программы, созданные по входным шейдерам
