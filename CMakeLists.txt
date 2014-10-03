@@ -27,7 +27,7 @@ IF (WIN32)
         $<TARGET_FILE_DIR:main>)
    add_custom_command(TARGET main POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${EXTERNAL_LIBS}/glew-1.11.0/bin/Release/Win32"
+        "${EXTERNAL_LIBS}/glew-1.10.0/bin/Release/Win32"
         $<TARGET_FILE_DIR:main>)
    add_custom_command(TARGET main POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
