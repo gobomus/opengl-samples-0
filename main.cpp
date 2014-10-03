@@ -1,6 +1,4 @@
-﻿//#define USE_CORE_OPENGL
-
-#include "common.h"
+﻿#include "common.h"
 #include "shader.h"
 
 #ifndef APIENTRY
@@ -23,25 +21,20 @@ public:
    ~sample_t();
 
    void init_buffer();
-   void init_vertex_array();
    void draw_frame( float time_from_start );
 
 private:
    bool wireframe_;
    GLuint vs_, fs_, program_;
    GLuint vx_buf_;
-   GLuint vao_;
    quat   rotation_by_control_;
 };
 
 sample_t::sample_t()
    : wireframe_(false)
 {
-#ifdef USE_CORE_OPENGL
-   TwInit(TW_OPENGL_CORE, NULL);
-#else
    TwInit(TW_OPENGL, NULL);
-#endif
+
    // Определение "контролов" GUI
    TwBar *bar = TwNewBar("Parameters");
    TwDefine(" Parameters size='500 150' color='70 100 120' valueswidth=220 iconpos=topleft");
@@ -61,8 +54,6 @@ sample_t::sample_t()
    program_ = create_program(vs_, fs_);
    // Создание буфера с вершинными данными
    init_buffer();
-   // Создание VAO
-   init_vertex_array();
 }
 
 sample_t::~sample_t()
@@ -71,7 +62,6 @@ sample_t::~sample_t()
    glDeleteProgram(program_);
    glDeleteShader(vs_);
    glDeleteShader(fs_);
-   glDeleteVertexArrays(1, &vao_);
    glDeleteBuffers(1, &vx_buf_);
 
    TwDeleteAllBars();
@@ -99,23 +89,6 @@ void sample_t::init_buffer()
    // Сбрасываем текущий активный буфер
    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
-
-void sample_t::init_vertex_array()
-{
-   glGenVertexArrays(1, &vao_);
-   glBindVertexArray(vao_);
-      // присоединяем буфер vx_buf_ в vao
-      glBindBuffer(GL_ARRAY_BUFFER, vx_buf_);
-
-      // запрашиваем индек аттрибута у программы, созданные по входным шейдерам
-      GLuint const pos_location = glGetAttribLocation(program_, "in_pos");
-      // устанавливаем формам данных для аттрибута "pos_location"
-      // 2 float'а ненормализованных, шаг между вершиными равен sizeof(vec2), смещение от начала буфера равно 0
-      glVertexAttribPointer(pos_location, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), 0);
-      // "включаем" аттрибут "pos_location"
-      glEnableVertexAttribArray(pos_location);
-   glBindVertexArray(0);
-};
 
 void sample_t::draw_frame( float time_from_start )
 {
@@ -158,10 +131,21 @@ void sample_t::draw_frame( float time_from_start )
    glUniform1f(time_location, time_from_start);
 
    // установка vao (буфер с данными + формат)
-   glBindVertexArray(vao_);
+   glBindBuffer(GL_ARRAY_BUFFER, vx_buf_);
 
-   // отрисовка
+   // запрашиваем индек аттрибута у программы, созданные по входным шейдерам
+   GLuint const pos_location = glGetAttribLocation(program_, "in_pos");
+   // устанавливаем формам данных для аттрибута "pos_location"
+   // 2 float'а ненормализованных, шаг между вершиными равен sizeof(vec2), смещение от начала буфера равно 0
+   glVertexAttribPointer(pos_location, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), 0);
+   // "включаем" аттрибут "pos_location"
+   glEnableVertexAttribArray(pos_location);
+
+      // отрисовка
    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+   glDisableVertexAttribArray(pos_location);
+   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -250,8 +234,8 @@ int main( int argc, char ** argv )
    // - GLUT_RGB - 3-ёх компонентный цвет
    // - GLUT_DEPTH - будет использоваться буфер глубины
    glutInitDisplayMode    (GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
-   // Создаем контекст версии 3.3
-   glutInitContextVersion (3, 3);
+   // Создаем контекст версии 3.2
+   glutInitContextVersion (3, 2);
    // Контекст будет поддерживать отладку и "устаревшую" функциональность, которой, например, может пользоваться библиотека AntTweakBar
    glutInitContextFlags   (GLUT_FORWARD_COMPATIBLE | GLUT_DEBUG);
    // Указание либо на core либо на compatibility профил
@@ -266,25 +250,11 @@ int main( int argc, char ** argv )
    }
 
    // Проверка созданности контекста той версии, какой мы запрашивали
-   if (!GLEW_VERSION_3_3)
+   if (!GLEW_VERSION_3_2)
    {
-      cerr << "OpenGL 3.3 not supported" << endl;
+      cerr << "OpenGL 3.2 not supported" << endl;
       return 1;
    }
-
-#ifdef USE_CORE_OPENGL
-   glutDestroyWindow(window_handle);
-   glutInitContextProfile(GLUT_CORE_PROFILE);
-   window_handle = glutCreateWindow("OpenGL basic sample");
-#endif
-
-   // Трассировка ошибок по callback'у
-   glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-   glDebugMessageCallbackARB(gl_debug_proc, NULL);
-   // выключить все трассировки
-   glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE           , GL_DONT_CARE, 0, NULL, false);
-   // включить сообщения только об ошибках
-   glDebugMessageControlARB(GL_DONT_CARE, GL_DEBUG_TYPE_ERROR_ARB, GL_DONT_CARE, 0, NULL, true );
 
    // подписываемся на оконные события
    glutReshapeFunc(reshape_func);
