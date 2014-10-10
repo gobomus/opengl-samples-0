@@ -92,6 +92,7 @@ void sample_t::init_buffer()
 
 void sample_t::draw_frame( float time_from_start )
 {
+    //return;
    float const rotation_angle = time_from_start * 90;
 
    float const w                = (float)glutGet(GLUT_WINDOW_WIDTH);
@@ -234,11 +235,11 @@ int main( int argc, char ** argv )
    // - GLUT_DEPTH - будет использоваться буфер глубины
    glutInitDisplayMode    (GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
    // Создаем контекст версии 3.2
-   glutInitContextVersion (3, 2);
+   glutInitContextVersion (3, 0);
    // Контекст будет поддерживать отладку и "устаревшую" функциональность, которой, например, может пользоваться библиотека AntTweakBar
-   glutInitContextFlags   (GLUT_FORWARD_COMPATIBLE | GLUT_DEBUG);
+  // glutInitContextFlags   (GLUT_FORWARD_COMPATIBLE | GLUT_DEBUG);
    // Указание либо на core либо на compatibility профил
-   glutInitContextProfile (GLUT_COMPATIBILITY_PROFILE );
+   //glutInitContextProfile (GLUT_COMPATIBILITY_PROFILE );
    int window_handle = glutCreateWindow("OpenGL basic sample");
 
    // Инициализация указателей на функции OpenGL
@@ -249,9 +250,9 @@ int main( int argc, char ** argv )
    }
 
    // Проверка созданности контекста той версии, какой мы запрашивали
-   if (!GLEW_VERSION_3_2)
+   if (!GLEW_VERSION_3_0)
    {
-      cerr << "OpenGL 3.2 not supported" << endl;
+      cerr << "OpenGL 3.0 not supported" << endl;
       return 1;
    }
 
