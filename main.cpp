@@ -102,17 +102,17 @@ void sample_t::load_texture()
    if(!dib)
       return;
 
-	BYTE* bits(0);
-	//image width and height
-	unsigned int width(0), height(0);
+   BYTE* bits(0);
+   //image width and height
+   unsigned int width(0), height(0);
 
-   	bits = FreeImage_GetBits(dib);
-	//get the image width and height
-	width = FreeImage_GetWidth(dib);
-	height = FreeImage_GetHeight(dib);
-	//if this somehow one of these failed (they shouldn't), return failure
-	if((bits == 0) || (width == 0) || (height == 0))
-		return ;
+   bits = FreeImage_GetBits(dib);
+   //get the image width and height
+   width = FreeImage_GetWidth(dib);
+   height = FreeImage_GetHeight(dib);
+   //if this somehow one of these failed (they shouldn't), return failure
+   if((bits == 0) || (width == 0) || (height == 0))
+      return ;
 
    glGenTextures(1, &tex_);
    glBindTexture(GL_TEXTURE_2D, tex_);
