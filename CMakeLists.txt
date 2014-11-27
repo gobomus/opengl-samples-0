@@ -12,14 +12,16 @@ IF (WIN32)
    include_directories(${EXTERNAL_LIBS}/freeglut/include)
    include_directories(${EXTERNAL_LIBS}/glew-1.10.0/include)
    include_directories(${EXTERNAL_LIBS}/glm)
+   include_directories(${EXTERNAL_LIBS}/FreeImage/include)
 
    link_directories(${EXTERNAL_LIBS}/AntTweakBar/lib)
    link_directories(${EXTERNAL_LIBS}/freeglut/lib)
    link_directories(${EXTERNAL_LIBS}/glew-1.10.0/lib/Release/Win32)
+   link_directories(${EXTERNAL_LIBS}/FreeImage/lib)
 
    add_executable(main ${cpps} ${headers})
 
-   target_link_libraries(main freeglut glew32 AntTweakBar)
+   target_link_libraries(main freeglut glew32 AntTweakBar FreeImage)
 
    add_custom_command(TARGET main POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -32,6 +34,10 @@ IF (WIN32)
    add_custom_command(TARGET main POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${EXTERNAL_LIBS}/freeglut/bin"
+        $<TARGET_FILE_DIR:main>)
+   add_custom_command(TARGET main POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${EXTERNAL_LIBS}/FreeImage/bin"
         $<TARGET_FILE_DIR:main>)
 
    add_custom_command(TARGET main POST_BUILD

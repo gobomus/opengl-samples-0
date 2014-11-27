@@ -9,7 +9,10 @@ in vs_output
 // Один выходной аттрибут - цвет, который будет записан в буфер экрана
 out vec3 o_color;
 
+uniform sampler2D tex;
+
 void main()
 {
-   o_color = f_in.color;
+   vec3 tex_color = texture(tex, gl_FragCoord.xy / 512.0).rgb;
+   o_color = tex_color;
 }

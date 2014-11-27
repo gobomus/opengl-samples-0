@@ -3,6 +3,8 @@
 #include "common.h"
 #include "shader.h"
 
+#include "FreeImage.h"
+
 #ifndef APIENTRY
    #define APIENTRY
 #endif
@@ -25,6 +27,7 @@ public:
    void init_buffer();
    void init_vertex_array();
    void draw_frame( float time_from_start );
+   void load_texture();
 
 private:
    bool wireframe_;
@@ -32,6 +35,9 @@ private:
    GLuint vx_buf_;
    GLuint vao_;
    quat   rotation_by_control_;
+
+
+   GLuint tex_;
 };
 
 sample_t::sample_t()
@@ -63,6 +69,8 @@ sample_t::sample_t()
    init_buffer();
    // Создание VAO
    init_vertex_array();
+
+   load_texture();
 }
 
 sample_t::~sample_t()
@@ -78,6 +86,45 @@ sample_t::~sample_t()
    TwTerminate();
 }
 
+void sample_t::load_texture()
+{
+   string const file_name = "lenna.jpg";
+
+   FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
+   //pointer to the image, once loaded
+   FIBITMAP *dib(0);
+   fif = FreeImage_GetFileType(file_name.c_str(), 0);
+   if(fif == FIF_UNKNOWN) 
+      fif = FreeImage_GetFIFFromFilename(file_name.c_str());
+   if(FreeImage_FIFSupportsReading(fif))
+      dib = FreeImage_Load(fif, file_name.c_str());
+   //if the image failed to load, return failure
+   if(!dib)
+      return;
+
+	BYTE* bits(0);
+	//image width and height
+	unsigned int width(0), height(0);
+
+   	bits = FreeImage_GetBits(dib);
+	//get the image width and height
+	width = FreeImage_GetWidth(dib);
+	height = FreeImage_GetHeight(dib);
+	//if this somehow one of these failed (they shouldn't), return failure
+	if((bits == 0) || (width == 0) || (height == 0))
+		return ;
+
+   glGenTextures(1, &tex_);
+   glBindTexture(GL_TEXTURE_2D, tex_);
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, bits);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glBindTexture(GL_TEXTURE_2D, 0);
+
+   FreeImage_Unload(dib);
+}
+
+
 void sample_t::init_buffer()
 {
    // Создание пустого буфера
@@ -88,9 +135,9 @@ void sample_t::init_buffer()
    // Данные для визуализации
    vec2 const data[3] =
    {
-        vec2(0, 0)
-      , vec2(1, 0)
-      , vec2(1, 1)
+        vec2(-1, -1)
+      , vec2( 1, -1)
+      , vec2( 1,  1)
    };
 
    // Копируем данные для текущего буфера на GPU
@@ -119,14 +166,14 @@ void sample_t::init_vertex_array()
 
 void sample_t::draw_frame( float time_from_start )
 {
-   float const rotation_angle = time_from_start * 90;
+   float const rotation_angle = 0 * time_from_start * 90;
 
    float const w                = (float)glutGet(GLUT_WINDOW_WIDTH);
    float const h                = (float)glutGet(GLUT_WINDOW_HEIGHT);
    // строим матрицу проекции с aspect ratio (отношением сторон) таким же, как у окна
    mat4  const proj             = perspective(45.0f, w / h, 0.1f, 100.0f);
    // преобразование из СК мира в СК камеры
-   mat4  const view             = lookAt(vec3(0, 0, 8), vec3(0, 0, 0), vec3(0, 1, 0));
+   mat4  const view             = lookAt(vec3(0, 0, 1), vec3(0, 0, 0), vec3(0, 1, 0));
    // анимация по времени
    quat  const rotation_by_time = quat(vec3(radians(rotation_angle), 0, 0));
    mat4  const modelview        = view * mat4_cast(rotation_by_control_ * rotation_by_time);
@@ -157,11 +204,17 @@ void sample_t::draw_frame( float time_from_start )
    GLuint const time_location = glGetUniformLocation(program_, "time");
    glUniform1f(time_location, time_from_start);
 
+   glBindTexture(GL_TEXTURE_2D, tex_);
+   GLuint const tex_location = glGetUniformLocation(program_, "tex");
+   glUniform1i(tex_location, 0);
+
    // установка vao (буфер с данными + формат)
    glBindVertexArray(vao_);
 
    // отрисовка
    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
