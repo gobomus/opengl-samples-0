@@ -48,6 +48,10 @@ IF (WIN32)
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${PROJECT_SOURCE_DIR}/shaders"
         $<TARGET_FILE_DIR:main>/shaders)
+   add_custom_command(TARGET main POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_SOURCE_DIR}/content"
+        ${PROJECT_BINARY_DIR}/content)
 ELSE (WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11")
 

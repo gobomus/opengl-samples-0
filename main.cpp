@@ -88,16 +88,16 @@ sample_t::~sample_t()
 
 void sample_t::load_texture()
 {
-   string const file_name = "lenna.jpg";
+   char const * file_name = "content/lenna_head.png";
 
    FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
    //pointer to the image, once loaded
    FIBITMAP *dib(0);
-   fif = FreeImage_GetFileType(file_name.c_str(), 0);
+   fif = FreeImage_GetFileType(file_name, 0);
    if(fif == FIF_UNKNOWN) 
-      fif = FreeImage_GetFIFFromFilename(file_name.c_str());
+      fif = FreeImage_GetFIFFromFilename(file_name);
    if(FreeImage_FIFSupportsReading(fif))
-      dib = FreeImage_Load(fif, file_name.c_str());
+      dib = FreeImage_Load(fif, file_name);
    //if the image failed to load, return failure
    if(!dib)
       return;
@@ -124,6 +124,19 @@ void sample_t::load_texture()
    FreeImage_Unload(dib);
 }
 
+#pragma pack(push, 1)
+   struct vertex_t
+   {
+      vertex_t( vec2 p, vec2 s)
+         : pos(p)
+         , st(s)
+      {
+      }
+
+      vec2 pos;
+      vec2 st;
+   };
+#pragma pack(pop)
 
 void sample_t::init_buffer()
 {
@@ -133,15 +146,16 @@ void sample_t::init_buffer()
    glBindBuffer(GL_ARRAY_BUFFER, vx_buf_);
 
    // Данные для визуализации
-   vec2 const data[3] =
+   vertex_t const data[4] =
    {
-        vec2(-1, -1)
-      , vec2( 1, -1)
-      , vec2( 1,  1)
+        vertex_t(vec2(-1, -1), vec2(0, 0))
+      , vertex_t(vec2( 1, -1), vec2(1, 0))
+      , vertex_t(vec2( 1,  1), vec2(1, 1))
+      , vertex_t(vec2(-1,  1), vec2(0, 1))
    };
 
    // Копируем данные для текущего буфера на GPU
-   glBufferData(GL_ARRAY_BUFFER, sizeof(vec2) * 3, data, GL_STATIC_DRAW);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_t) * 4, data, GL_STATIC_DRAW);
 
    // Сбрасываем текущий активный буфер
    glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -154,13 +168,14 @@ void sample_t::init_vertex_array()
       // присоединяем буфер vx_buf_ в vao
       glBindBuffer(GL_ARRAY_BUFFER, vx_buf_);
 
-      // запрашиваем индек аттрибута у программы, созданные по входным шейдерам
       GLuint const pos_location = glGetAttribLocation(program_, "in_pos");
-      // устанавливаем формам данных для аттрибута "pos_location"
-      // 2 float'а ненормализованных, шаг между вершиными равен sizeof(vec2), смещение от начала буфера равно 0
-      glVertexAttribPointer(pos_location, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), 0);
-      // "включаем" аттрибут "pos_location"
+      glVertexAttribPointer(pos_location, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), 0);
       glEnableVertexAttribArray(pos_location);
+
+      GLuint const st_location = glGetAttribLocation(program_, "in_st");
+      glVertexAttribPointer(st_location, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (GLvoid *)offsetof(vertex_t, st));
+      glEnableVertexAttribArray(st_location);
+
    glBindVertexArray(0);
 };
 
@@ -173,7 +188,7 @@ void sample_t::draw_frame( float time_from_start )
    // строим матрицу проекции с aspect ratio (отношением сторон) таким же, как у окна
    mat4  const proj             = perspective(45.0f, w / h, 0.1f, 100.0f);
    // преобразование из СК мира в СК камеры
-   mat4  const view             = lookAt(vec3(0, 0, 1), vec3(0, 0, 0), vec3(0, 1, 0));
+   mat4  const view             = lookAt(vec3(0, 0, 5), vec3(0, 0, 0), vec3(0, 1, 0));
    // анимация по времени
    quat  const rotation_by_time = quat(vec3(radians(rotation_angle), 0, 0));
    mat4  const modelview        = view * mat4_cast(rotation_by_control_ * rotation_by_time);
@@ -212,7 +227,7 @@ void sample_t::draw_frame( float time_from_start )
    glBindVertexArray(vao_);
 
    // отрисовка
-   glDrawArrays(GL_TRIANGLES, 0, 3);
+   glDrawArrays(GL_QUADS, 0, 4);
 
    glBindTexture(GL_TEXTURE_2D, 0);
 }

@@ -1,18 +1,17 @@
 #version 330
 
-// ¬ход с вершинного шейдера
 in vs_output
 {
    vec3 color;
+   vec2 st;
 } f_in;
 
-// ќдин выходной аттрибут - цвет, который будет записан в буфер экрана
 out vec3 o_color;
 
 uniform sampler2D tex;
 
 void main()
 {
-   vec3 tex_color = texture(tex, gl_FragCoord.xy / 512.0).rgb;
+   vec3 tex_color = texture(tex, f_in.st).rgb;
    o_color = tex_color;
 }
