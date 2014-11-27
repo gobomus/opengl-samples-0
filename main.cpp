@@ -177,8 +177,8 @@ void sample_t::init_buffer()
    {
         vertex_t(vec2(-1, -1), vec2(0, 0))
       , vertex_t(vec2( 1, -1), vec2(1, 0))
-      , vertex_t(vec2( 1,  1), vec2(1, 1))
       , vertex_t(vec2(-1,  1), vec2(0, 1))
+      , vertex_t(vec2( 1,  1), vec2(1, 1))
    };
 
    // Копируем данные для текущего буфера на GPU
@@ -217,7 +217,7 @@ void sample_t::draw_frame( float time_from_start )
    // преобразование из СК мира в СК камеры
    mat4  const view             = lookAt(vec3(0, 0, 5), vec3(0, 0, 0), vec3(0, 1, 0));
    // анимация по времени
-   quat  const rotation_by_time = quat(vec3(radians(rotation_angle), 0, 0));
+   quat  const rotation_by_time = quat(vec3(radians(rotation_angle), radians(rotation_angle * 0.5), sin(radians(rotation_angle))));
    mat4  const modelview        = view * mat4_cast(rotation_by_control_);
    mat4  const mvp              = proj * modelview;
 
@@ -261,11 +261,11 @@ void sample_t::draw_frame( float time_from_start )
       glBindVertexArray(vao_);
 
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-      glDrawArrays(GL_QUADS, 0, 4);
+      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
       glBindTexture(GL_TEXTURE_2D, 0);
       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-      glDrawArrays(GL_QUADS, 0, 4);
+      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
       glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -301,7 +301,7 @@ void sample_t::draw_frame( float time_from_start )
    glBindVertexArray(vao_);
 
    // отрисовка
-   glDrawArrays(GL_QUADS, 0, 4);
+   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
    glBindTexture(GL_TEXTURE_2D, 0);
 }
