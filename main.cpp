@@ -28,6 +28,7 @@ public:
    void init_vertex_array();
    void draw_frame( float time_from_start );
    void load_texture();
+   void create_fbo();
 
 private:
    bool wireframe_;
@@ -35,13 +36,16 @@ private:
    GLuint vx_buf_;
    GLuint vao_;
    quat   rotation_by_control_;
-
+   GLuint fbo_;
+   GLuint tex_fbo_;
+   ivec2  fbo_size_;
 
    GLuint tex_;
 };
 
 sample_t::sample_t()
    : wireframe_(false)
+   , fbo_size_(300, 300)
 {
 #ifdef USE_CORE_OPENGL
    TwInit(TW_OPENGL_CORE, NULL);
@@ -71,6 +75,8 @@ sample_t::sample_t()
    init_vertex_array();
 
    load_texture();
+
+   create_fbo();
 }
 
 sample_t::~sample_t()
@@ -122,6 +128,27 @@ void sample_t::load_texture()
    glBindTexture(GL_TEXTURE_2D, 0);
 
    FreeImage_Unload(dib);
+}
+
+void sample_t::create_fbo()
+{
+   glGenTextures(1, &tex_fbo_);
+   glBindTexture(GL_TEXTURE_2D, tex_fbo_);
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, fbo_size_.x, fbo_size_.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glBindTexture(GL_TEXTURE_2D, 0);
+
+   glGenFramebuffers(1, &fbo_);
+
+   glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_fbo_, 0);
+
+   GLenum const status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+   if (status != GL_FRAMEBUFFER_COMPLETE)
+      throw std::runtime_error("fbo error");
+
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 #pragma pack(push, 1)
@@ -181,7 +208,7 @@ void sample_t::init_vertex_array()
 
 void sample_t::draw_frame( float time_from_start )
 {
-   float const rotation_angle = 0 * time_from_start * 90;
+   float const rotation_angle = time_from_start * 90;
 
    float const w                = (float)glutGet(GLUT_WINDOW_WIDTH);
    float const h                = (float)glutGet(GLUT_WINDOW_HEIGHT);
@@ -191,14 +218,10 @@ void sample_t::draw_frame( float time_from_start )
    mat4  const view             = lookAt(vec3(0, 0, 5), vec3(0, 0, 0), vec3(0, 1, 0));
    // анимация по времени
    quat  const rotation_by_time = quat(vec3(radians(rotation_angle), 0, 0));
-   mat4  const modelview        = view * mat4_cast(rotation_by_control_ * rotation_by_time);
+   mat4  const modelview        = view * mat4_cast(rotation_by_control_);
    mat4  const mvp              = proj * modelview;
 
    // выбор режима растеризации - только рёбра или рёбра + грани
-   if (wireframe_)
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-   else
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
    // выключаем отсечение невидимых поверхностей
    glDisable(GL_CULL_FACE);
@@ -207,6 +230,57 @@ void sample_t::draw_frame( float time_from_start )
    // очистка буфера кадра
    glClearColor(0.2f, 0.2f, 0.2f, 1);
    glClearDepth(1);
+   
+   // render to fbo
+   {
+      ivec4 win_viewport;
+      glGetIntegerv(GL_VIEWPORT, (GLint *)&win_viewport);
+
+      glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+      glClearColor(1, 0, 0, 1);
+      glViewport(0, 0, fbo_size_.x, fbo_size_.y);
+
+      glClear(GL_COLOR_BUFFER_BIT);
+
+      // установка шейдеров для рисования
+      glUseProgram(program_);
+
+      // установка uniform'ов
+      GLuint const mvp_location = glGetUniformLocation(program_, "mvp");
+      mat4 rr = proj * view * mat4_cast(rotation_by_time);
+      glUniformMatrix4fv(mvp_location, 1, GL_FALSE, &rr[0][0]);
+
+      GLuint const time_location = glGetUniformLocation(program_, "time");
+      glUniform1f(time_location, time_from_start);
+
+      glBindTexture(GL_TEXTURE_2D, tex_);
+      GLuint const tex_location = glGetUniformLocation(program_, "tex");
+      glUniform1i(tex_location, 0);
+
+      // установка vao (буфер с данными + формат)
+      glBindVertexArray(vao_);
+
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      glDrawArrays(GL_QUADS, 0, 4);
+
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+      glDrawArrays(GL_QUADS, 0, 4);
+
+      glBindTexture(GL_TEXTURE_2D, 0);
+
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+      glViewport(win_viewport.x, win_viewport.y, win_viewport.z, win_viewport.w);
+   }
+
+   if (wireframe_)
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+   else
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+   glClearColor(0.2f, 0.2f, 0.2f, 1);
+   
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
    // установка шейдеров для рисования
@@ -219,7 +293,7 @@ void sample_t::draw_frame( float time_from_start )
    GLuint const time_location = glGetUniformLocation(program_, "time");
    glUniform1f(time_location, time_from_start);
 
-   glBindTexture(GL_TEXTURE_2D, tex_);
+   glBindTexture(GL_TEXTURE_2D, tex_fbo_);
    GLuint const tex_location = glGetUniformLocation(program_, "tex");
    glUniform1i(tex_location, 0);
 
